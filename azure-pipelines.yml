@@ -607,42 +607,11 @@ jobs:
       TargetPath: '$(Build.ArtifactStagingDirectory)/metadata'
       artifactName: metadata
 
-
-  - task: DownloadPipelineArtifact@1
-    displayName: 'Download PyPI Packages'
-    inputs:
-      TargetPath: '$(Build.ArtifactStagingDirectory)/pypi'
-      artifactName: pypi
-
-  - bash: |
-       #!/bin/bash
-
-       root=$(cd $(dirname $0); pwd)
-
-       set -evx
-
-       CLI_VERSION=`cat $BUILD_ARTIFACTSTAGINGDIRECTORY/metadata/version`
-       HOMEBREW_UPSTREAM_URL=`curl -Ls -o /dev/null -w %{url_effective} https://api.github.com/repos/Azure/azure-cli/tarball/$BUILD_SOURCEVERSION`
-
-       docker_files=$(cd $BUILD_SOURCESDIRECTORY/scripts/release/homebrew/docker; pwd)
-       pypi_files=$(cd $BUILD_ARTIFACTSTAGINGDIRECTORY/pypi; pwd)
-
-       echo "Generating formula in docker container ... "
-       docker run -v $docker_files:/mnt/scripts \
-                  -v $pypi_files:/mnt/pypi \
-                  -e CLI_VERSION=$CLI_VERSION \
-                  -e HOMEBREW_UPSTREAM_URL=$HOMEBREW_UPSTREAM_URL \
-                  --name azurecli \
-                  python:3.6 \
-                  /mnt/scripts/run.sh
-
-       # clean up
-       rm -rf $BUILD_ARTIFACTSTAGINGDIRECTORY/metadata
-       rm -rf $BUILD_ARTIFACTSTAGINGDIRECTORY/pypi
-
-       docker cp azurecli:azure-cli.rb $BUILD_ARTIFACTSTAGINGDIRECTORY/azure-cli.rb
-       docker rm --force azurecli
+  - task: Bash@3
     displayName: 'Build homebrew formula'
+    inputs:
+      targetType: 'filePath'
+      filePath: scripts/release/homebrew/pipeline.sh
 
   - task: PublishPipelineArtifact@0
     displayName: 'Publish Artifact: homebrew'
